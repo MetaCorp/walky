@@ -1,83 +1,100 @@
 import React, { Component } from 'react';
-import GoogleMapReact from 'google-map-react';
 import { ListGroup, ListGroupItem } from "shards-react";
 
-import Marker from './assets/marker.png'
+import { GoogleMap, LoadScript, Marker, Polyline } from '@react-google-maps/api';
+
+import MarkerImg from './assets/marker.png'
 
 import "shards-ui/dist/css/shards.min.css"
 
 const AnyReactComponent = ({ text }) => <div>{text}</div>;
 
-class SimpleMap extends Component {
-  state = {
-    steps: []
-  }
+const containerStyle = {
+  width: '100vw',
+  height: '100vh'
+};
+ 
+const center = {
+  lat: 47.52772633436567,
+  lng: 2.872425022026164
+};
 
-  static defaultProps = {
-    center: {
-      lat: 59.95,
-      lng: 30.33
-    },
-    zoom: 11
-  }
+const SimpleMap = ({ }) => {
+  const [map, setMap] = React.useState(null)
+  const [steps, setSteps] = React.useState([])
+  
+  const onLoad = React.useCallback(function callback(map) {
+    const bounds = new window.google.maps.LatLngBounds();
+    // map.fitBounds(bounds);
+    setMap(map)
+  }, [])
+ 
+  const onUnmount = React.useCallback(function callback(map) {
+    setMap(null)
+  }, [])
 
-  handleAddStep = ({ x, y, lat, lng, event }) => {
+  const handleAddStep = (e) => {
+    const { latLng } = e
+    const lat = latLng.lat()
+    const lng = latLng.lng()
+
     const newStep = {
-      lat,
-      lng
+      position: {
+        lat,
+        lng
+      }
     }
     
-    this.setState({
-      steps: [...this.state.steps, newStep]
-    })
+    setSteps([...steps, newStep])
   }
 
-  renderPolylines = (google, maps) => {
-    var flightPath = new google.maps.Polyline({
-      path: [ { "lat": 53.480759, "lng": -2.242631 },{ "lat": 51.507351, "lng": -0.127758 },{ "lat": 55.953252, "lng": -3.188267 } ],
-      geodesic: true,
-      strokeColor: '#33BD4E',
-      strokeOpacity: 1,
-      strokeWeight: 5
-    });
+  const handleMarkerDrag = (e, index) => {
+    const { latLng } = e;
+    const lat = latLng.lat();
+    const lng = latLng.lng();
 
-    flightPath.setMap(google.map);
+    const newSteps = [...steps]
+    newSteps[index] = { ...newSteps[index], position: { lat, lng } }
+
+    setSteps(newSteps)
   }
 
-  render() {
-    return (
-      // Important! Always set the container height explicitly
-      <div style={{ height: '100vh', width: '100%' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 320, backgroundColor: 'white', zIndex: 1, boxShadow: '0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22)', padding: '24px 24px' }}>
-          <h1>Walk</h1>
-          <hr />
-          <ListGroup style={{ paddingLeft: 0, listStyle: 'none' }}>
-            {this.state.steps.map(step => <ListGroupItem>{step.lat + ',' + step.lng}</ListGroupItem>)}
-          </ListGroup>
-        </div>
-        <GoogleMapReact
-          bootstrapURLKeys={{ key: 'AIzaSyD1JFsWdhANdmjBfZ9DZogLgkHN8QuVw8U' }}
-          defaultCenter={this.props.center}
-          defaultZoom={this.props.zoom}
-          onClick={this.handleAddStep}
-          // onGoogleApiLoaded={({map, maps}) => this.renderPolylines(map, maps)}>
-        >
-          {this.state.steps.map(step => (
-            <div
-              style={{ marginTop: -36, marginLeft: -18 }}
-              lat={step.lat}
-              lng={step.lng}
-            >
-              <img
-                src={Marker}
-                width={36}
-              />
-            </div>
-          ))}
-        </GoogleMapReact>
+  return (
+    <div style={{ height: '100vh', width: '100%' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 320, backgroundColor: 'white', zIndex: 1, boxShadow: '0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22)', padding: '24px 24px' }}>
+        <h1>Walk</h1>
+        <hr />
+        <ListGroup style={{ paddingLeft: 0, listStyle: 'none' }}>
+          {steps.map(step => <ListGroupItem>{step.position.lat + ',' + step.position.lng}</ListGroupItem>)}
+        </ListGroup>
       </div>
-    );
-  }
+
+      <LoadScript
+        googleMapsApiKey="AIzaSyD1JFsWdhANdmjBfZ9DZogLgkHN8QuVw8U"
+      >
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={center}
+          zoom={10}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+          onClick={handleAddStep}
+        >
+          {steps.map((step, i) => (
+          <Marker
+            key={i}
+            position={step.position}
+            draggable
+            onDrag={e => handleMarkerDrag(e, i)}
+            // icon={<img src={MarkerImg} />} // TODO : change size
+          />
+        ))}
+        <Polyline path={steps.map(step => step.position)} />
+        </GoogleMap>
+      </LoadScript>
+
+    </div>
+  );
 }
 
 export default SimpleMap;
