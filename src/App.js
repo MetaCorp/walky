@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import { ListGroup, ListGroupItem } from "shards-react";
 
-import { GoogleMap, LoadScript, Marker, Polyline } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker, Polyline, OverlayView } from '@react-google-maps/api';
+
+import Popup from "reactjs-popup"
 
 import MarkerImg from './assets/marker.png'
 
@@ -22,6 +24,9 @@ const center = {
 const SimpleMap = ({ }) => {
   const [map, setMap] = React.useState(null)
   const [steps, setSteps] = React.useState([])
+  const [modalOpen, setModalOpen] = React.useState(false)
+
+  const [overlayOpens, setOverlayOpens] = React.useState({})
   
   const onLoad = React.useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds();
@@ -59,6 +64,10 @@ const SimpleMap = ({ }) => {
     setSteps(newSteps)
   }
 
+  const handleMarkerClick = (index) => {
+    setOverlayOpens({ ...overlayOpens, [index]: !overlayOpens[index]})
+  }
+
   return (
     <div style={{ height: '100vh', width: '100%' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 320, backgroundColor: 'white', zIndex: 1, boxShadow: '0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22)', padding: '24px 24px' }}>
@@ -81,20 +90,39 @@ const SimpleMap = ({ }) => {
           onClick={handleAddStep}
         >
           {steps.map((step, i) => (
-          <Marker
-            key={i}
-            position={step.position}
-            draggable
-            onDrag={e => handleMarkerDrag(e, i)}
-            // icon={<img src={MarkerImg} />} // TODO : change size
-          />
-        ))}
-        <Polyline path={steps.map(step => step.position)} />
+            <div>
+              <Marker
+                key={i}
+                position={step.position}
+                draggable
+                onDrag={e => handleMarkerDrag(e, i)}
+                onClick={e => handleMarkerClick(i)}
+                // icon={<img src={MarkerImg} />} // TODO : change size
+              />
+              {overlayOpens[i] && (
+                <OverlayView
+                  position={step.position}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <button>delete</button>
+                </OverlayView>
+              )}
+            </div>
+          ))}
+          <Polyline path={steps.map(step => step.position)} />
         </GoogleMap>
       </LoadScript>
 
+      <Popup
+        position="right center"
+        open={modalOpen}
+        closeOnDocumentClick
+        onClose={() => setModalOpen(false)}
+      >
+        <div>Popup content here !!</div>
+      </Popup>
     </div>
   );
 }
 
-export default SimpleMap;
+export default React.memo(SimpleMap);
